@@ -230,7 +230,7 @@ def check_for_cygwin_mismatch() -> None:
             )
 
 
-def get_best_candidate_tag(rev: str, git_repo: str) -> str:
+def get_best_candidate_tag(rev: str, git_repo: str, prev_rev: str) -> str:
     """Get the best tag candidate.
 
     Multiple tags can exist on a SHA. Sometimes a moving tag is attached
@@ -239,7 +239,21 @@ def get_best_candidate_tag(rev: str, git_repo: str) -> str:
     tags = cmd_output(
         'git', *NO_FS_MONITOR, 'tag', '--points-at', rev, cwd=git_repo,
     )[1].splitlines()
-    for tag in tags:
-        if '.' in tag:
-            return tag
+
+    # Any tag with `.` is a candidate for a version tag.
+    tag_candiates = list(filter(lambda tag: '.' in tag, tags))
+
+    # If there are any tags prefer to return the tag "most similar" to
+    # previous tag.
+    if tag_candiates:
+        return max(
+            # For each candidate tag compute the lenght of the common prefix
+            # with the previous tag.
+            map(
+                lambda tag: (len(os.path.commonprefix([tag, prev_rev])), tag),
+                tag_candiates,
+                # Return tag with the longest common prefix with previous tag.
+            ), key=lambda t: t[0],
+        )[1]
+
     return rev

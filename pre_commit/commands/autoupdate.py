@@ -58,7 +58,7 @@ class RevInfo(NamedTuple):
                 rev = cmd_output(*_git, 'rev-parse', 'FETCH_HEAD')[1].strip()
             else:
                 if tags_only:
-                    rev = git.get_best_candidate_tag(rev, tmp)
+                    rev = git.get_best_candidate_tag(rev, tmp, self.rev)
 
             frozen = None
             if freeze:

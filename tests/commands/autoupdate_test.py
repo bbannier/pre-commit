@@ -530,3 +530,22 @@ def test_maintains_rev_quoting_style(tmpdir, out_of_date):
     assert autoupdate(str(cfg), freeze=False, tags_only=False) == 0
     expected = fmt.format(path=out_of_date.path, rev=out_of_date.head_rev)
     assert cfg.read() == expected
+
+
+def test_multiple_tags_best_candidate(tagged, in_tmpdir):
+    """Validate that if multiple tags point to the latest hook release we
+    prefer to pick the one more similar to the curently configured tag.
+    """
+    config = make_config_from_repo(tagged.path, rev='v1.2.3')
+    write_config('.', config)
+
+    # Create some content and two new tags, only one of which looks similar to
+    # the previoous tag.
+    git_commit(cwd=tagged.path)
+    cmd_output('git', 'tag', 'other-v47.11', cwd=tagged.path)
+    cmd_output('git', 'tag', 'v1.2.4', cwd=tagged.path)
+
+    assert autoupdate(C.CONFIG_FILE, freeze=False, tags_only=True) == 0
+    with open(C.CONFIG_FILE) as f:
+        # We should upgrade to the tag most similar to the previous one.
+        assert 'v1.2.4' in f.read()
